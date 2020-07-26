@@ -6,7 +6,7 @@ Database g_hDatabase = null;
 
 public Plugin myinfo = {
 	name		= "Chat Log",
-	author		= "venus",
+	author		= "venus, MINFAS",
 	description	= "Save all user messages in database",
 	version		= "1.0",
 	url			= "https://github.com/ivenuss"
@@ -16,8 +16,18 @@ public void OnConfigsExecuted()
 {
 	if (!g_hDatabase)
 	{
-		Database.Connect(SQL_Connection, "chatlog");
+		Database.Connect(SQL_Connection, "default");
 	}
+}
+
+public void OnPluginStart()
+{
+	PrintToChatAll("[ivenuss Chat Log] \x04Enabled");
+}
+
+public void OnPluginEnd()
+{
+	PrintToChatAll("[ivenuss Chat Log] \x02Disabled");
 }
 
 public void SQL_Connection(Database database, const char[] error, int data)
@@ -31,13 +41,14 @@ public void SQL_Connection(Database database, const char[] error, int data)
 		g_hDatabase.SetCharset("utf8mb4");
 
 		g_hDatabase.Query(SQL_CreateCallback, "\
-		CREATE TABLE IF NOT EXISTs`chat_log` ( \
+		CREATE TABLE IF NOT EXISTs`sm_chatlog` ( \
 			`id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT, \
-			`date` DATETIME NULL DEFAULT NULL, \
+			`timestamp` DATETIME NULL DEFAULT NULL, \
 			`map` VARCHAR(128) NOT NULL COLLATE 'utf8_general_ci', \
 			`steamid` VARCHAR(21) NOT NULL COLLATE 'utf8_general_ci', \
 			`name` VARCHAR(128) NOT NULL COLLATE 'utf8_general_ci', \
 			`message_style` TINYINT(2) NULL DEFAULT 0, \
+			`dead` TINYINT(2) NULL DEFAULT 0, \
 			`message` VARCHAR(126) NOT NULL COLLATE 'utf8_general_ci', \
 			PRIMARY KEY (`id`) USING BTREE \
 		) \
@@ -47,10 +58,12 @@ public void SQL_Connection(Database database, const char[] error, int data)
 	}
 }
 
-public void SQL_CreateCallback(Database datavas, DBResultSet results, const char[] error, int data)
+public void SQL_CreateCallback(Database database, DBResultSet results, const char[] error, int data)
 {
 	if (results == null)
+	{
 		SetFailState(error);
+	}
 		
 	g_bFullyConnected = true;
 }
@@ -61,7 +74,7 @@ public Action OnClientSayCommand(int client, const char[] command, const char[] 
 	{
 		if (strlen(szArgs) > 0)
 		{
-			int iMsgStyle;
+			int iMsgStyle, iDead;
 			int iTimeTmp = GetTime();
 			char szQuery[512], szTime[512], szMap[128], szSteamID[21];
 
@@ -75,7 +88,15 @@ public Action OnClientSayCommand(int client, const char[] command, const char[] 
 				iMsgStyle = 0; //General chat
 			}
 
-			FormatTime(szTime, sizeof(szTime), "%Y-%m-%d %T", iTimeTmp);
+			if(IsPlayerAlive(client))
+			{
+				iDead = 0;
+			}
+			else
+			{
+				iDead = 1;
+			}
+
 			GetCurrentMap(szMap, sizeof(szMap));
 
 			if(!GetClientAuthId(client, AuthId_Steam2, szSteamID, sizeof(szSteamID)))
@@ -84,14 +105,14 @@ public Action OnClientSayCommand(int client, const char[] command, const char[] 
 				return;
 			}
 
-			g_hDatabase.Format(szQuery, sizeof(szQuery), "INSERT INTO chat_log (date, map, steamid, name, message_style, message) VALUES ('%s', '%s', '%s', '%N', '%d', '%s')", szTime, szMap, szSteamID, client, iMsgStyle, szArgs);
+			g_hDatabase.Format(szQuery, sizeof(szQuery), "INSERT INTO sm_chatlog (timestamp, map, steamid, name, message_style, dead, message) VALUES ('%s', '%s', '%s', '%N', '%i', '%i', '%s')", szTime, szMap, szSteamID, client, iMsgStyle, iDead, szArgs);
 			
 			g_hDatabase.Query(SQL_Error, szQuery);
 		}
 	}
 }
 
-public void SQL_Error(Database datavas, DBResultSet results, const char[] error, int data)
+public void SQL_Error(Database database, DBResultSet results, const char[] error, int data)
 {
 	if (results == null)
 	{
