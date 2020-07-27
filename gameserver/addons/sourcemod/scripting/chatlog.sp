@@ -41,13 +41,13 @@ public void SQL_Connection(Database database, const char[] error, int data)
 		g_hDatabase.SetCharset("utf8mb4");
 
 		g_hDatabase.Query(SQL_CreateCallback, "\
-		CREATE TABLE IF NOT EXISTs`sm_chatlog` ( \
+		CREATE TABLE IF NOT EXISTS `sm_chatlog` ( \
 			`id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT, \
-			`timestamp` DATETIME NULL DEFAULT NULL, \
+			`timestamp` TEXT NULL DEFAULT NULL, \
 			`map` VARCHAR(128) NOT NULL COLLATE 'utf8_general_ci', \
 			`steamid` VARCHAR(21) NOT NULL COLLATE 'utf8_general_ci', \
 			`name` VARCHAR(128) NOT NULL COLLATE 'utf8_general_ci', \
-			`message_style` TINYINT(2) NULL DEFAULT 0, \
+			`team` TINYINT(2) NULL DEFAULT 0, \
 			`dead` TINYINT(2) NULL DEFAULT 0, \
 			`message` VARCHAR(126) NOT NULL COLLATE 'utf8_general_ci', \
 			PRIMARY KEY (`id`) USING BTREE \
@@ -70,7 +70,7 @@ public void SQL_CreateCallback(Database database, DBResultSet results, const cha
 
 public Action OnClientSayCommand(int client, const char[] command, const char[] szArgs)
 {
-	if (g_bFullyConnected && !IsFakeClient(client))
+	if (g_bFullyConnected && IsValidClient(client))
 	{
 		if (strlen(szArgs) > 0)
 		{
@@ -105,7 +105,7 @@ public Action OnClientSayCommand(int client, const char[] command, const char[] 
 				return;
 			}
 
-			g_hDatabase.Format(szQuery, sizeof(szQuery), "INSERT INTO sm_chatlog (timestamp, map, steamid, name, message_style, dead, message) VALUES ('%i', '%s', '%s', '%N', '%i', '%i', '%s')", iTimestamp, szMap, szSteamId, client, iMsgStyle, iDead, szArgs);
+			g_hDatabase.Format(szQuery, sizeof(szQuery), "INSERT INTO sm_chatlog (timestamp, map, steamid, name, team, dead, message) VALUES ('%i', '%s', '%s', '%N', '%i', '%i', '%s')", iTimestamp, szMap, szSteamId, client, iMsgStyle, iDead, szArgs);
 			
 			g_hDatabase.Query(SQL_Error, szQuery);
 		}
@@ -118,4 +118,13 @@ public void SQL_Error(Database database, DBResultSet results, const char[] error
 	{
 		SetFailState(error);
 	}
+}
+
+stock bool IsValidClient(int client)
+{
+	if(client >= 1 && client <= MaxClients && IsClientConnected(client) && IsClientInGame(client) && !IsClientSourceTV(client) && !IsFakeClient(client))
+	{
+		return true;
+	}
+	return false;
 }
