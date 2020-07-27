@@ -75,8 +75,8 @@ public Action OnClientSayCommand(int client, const char[] command, const char[] 
 		if (strlen(szArgs) > 0)
 		{
 			int iMsgStyle, iDead;
-			int iTimeTmp = GetTime();
-			char szQuery[512], szTime[512], szMap[128], szSteamID[21];
+			int iTimestamp = GetTime();
+			char szQuery[512], szMap[128], szSteamId[21];
 
 			if (StrContains(command, "_", false) != -1)
 			{
@@ -99,13 +99,13 @@ public Action OnClientSayCommand(int client, const char[] command, const char[] 
 
 			GetCurrentMap(szMap, sizeof(szMap));
 
-			if(!GetClientAuthId(client, AuthId_Steam2, szSteamID, sizeof(szSteamID)))
+			if(!GetClientAuthId(client, AuthId_Steam2, szSteamId, sizeof(szSteamId)))
 			{
 				LogError("Player %N's steamid couldn't be fetched", client);
 				return;
 			}
 
-			g_hDatabase.Format(szQuery, sizeof(szQuery), "INSERT INTO sm_chatlog (timestamp, map, steamid, name, message_style, dead, message) VALUES ('%s', '%s', '%s', '%N', '%i', '%i', '%s')", szTime, szMap, szSteamID, client, iMsgStyle, iDead, szArgs);
+			g_hDatabase.Format(szQuery, sizeof(szQuery), "INSERT INTO sm_chatlog (timestamp, map, steamid, name, message_style, dead, message) VALUES ('%i', '%s', '%s', '%N', '%i', '%i', '%s')", iTimestamp, szMap, szSteamId, client, iMsgStyle, iDead, szArgs);
 			
 			g_hDatabase.Query(SQL_Error, szQuery);
 		}
